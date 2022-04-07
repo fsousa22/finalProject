@@ -12,9 +12,34 @@ import re
 import os
 import csv
 import unittest
+import json
 
-def retriveCovidData():
-    pass
+def setUpDatabase(db_name):
+    path = os.path.dirname(os.path.abspath(__file__))
+    conn = sqlite3.connect(path+'/'+db_name)
+    cur = conn.cursor()
+    return cur, conn
+
+def retrieveDictfromData(fileName):
+    try:
+        source_dir = os.path.dirname(__file__)
+        full_path = os.path.join(source_dir, fileName)
+        file = open(full_path, 'r')
+        contents = file.read()
+        file.close()
+        data = json.loads(contents)
+    except:
+        print("error when reading from file")
+        data = []
+    return data
+
+def CovidDatatoDB(data, cur, conn):
+    cur.execute("CREATE TABLE IF NOT EXISTS Covid (date INTEGER PRIMARY KEY, positive INTEGER, positive_inc INTEGER, hospitalized_cur INTEGER)")
+    conn.commit()
+    for day in data:
+        cur.execute("INSERT OR IGNORE INTO Covid (date, positive, positive_inc, hospitalized_cur) VALUES (?,?,?,?)",(day['date'],day['positive'],day['positiveIncrease'],day['hospitalizedCurrently']))
+    conn.commit()
+
 
 def retrieveData(filename):
     with open(filename) as fp:
@@ -81,6 +106,11 @@ class TestCases(unittest.TestCase):
         self.assertEqual(len(retrieveData("Abbott.html")), 252)
         self.assertEqual(len(retrieveData("S&P.html")), 252)
         self.assertEqual(len(retrieveData("Delta.html")), 252)
+    
+    def testDatabase(self):
+        cur, conn = setUpDatabase('Covid.db')
+        self.data = retrieveDictfromData('Covid.json')
+        CovidDatatoDB(self.data,cur,conn)
 
 
 if __name__ == '__main__':
