@@ -1,8 +1,8 @@
 from calendar import c
 import sqlite3
 import os
-import matplotlib.pyplot as plt
-import numpy as np
+#import matplotlib.pyplot as plt
+#import numpy as np
 from queue import Empty
 from unittest import result
 from xml.sax import parseString
@@ -62,6 +62,28 @@ def retrieveData(filename):
     
     return closeData
 
+def abbottToDB(data, cur, conn):
+    cur.execute("CREATE TABLE IF NOT EXISTS Abbott (date DATE PRIMARY KEY, adjClose FLOAT(2))")
+    conn.commit()
+    for day in data:
+        cur.execute("INSERT OR IGNORE INTO Abbott (date, adjClose) VALUES (?, ?)",(day[1], day[0]))
+    conn.commit()
+
+def deltaToDB(data, cur, conn):
+    cur.execute("CREATE TABLE IF NOT EXISTS Delta (date DATE PRIMARY KEY, adjClose FLOAT(2))")
+    conn.commit()
+    for day in data:
+        cur.execute("INSERT OR IGNORE INTO Delta (date, adjClose) VALUES (?, ?)",(day[1], day[0]))
+    conn.commit()
+
+def SPToDB(data, cur, conn):
+    cur.execute("CREATE TABLE IF NOT EXISTS SP500 (date DATE PRIMARY KEY, adjClose FLOAT(2))")
+    conn.commit()
+    for day in data:
+        cur.execute("INSERT OR IGNORE INTO SP500 (date, adjClose) VALUES (?, ?)",(day[1], day[0]))
+    conn.commit()
+
+
 def monthNumber(month):
     if month == 'Jan': 
         return '01'
@@ -108,9 +130,20 @@ class TestCases(unittest.TestCase):
         self.assertEqual(len(retrieveData("Delta.html")), 252)
     
     def testDatabase(self):
-        cur, conn = setUpDatabase('Covid.db')
+        cur, conn = setUpDatabase('Data.db')
         self.data = retrieveDictfromData('Covid.json')
         CovidDatatoDB(self.data,cur,conn)
+
+        self.dataAb = retrieveData("Abbott.html")
+        abbottToDB(self.dataAb, cur, conn)
+
+        self.dataDelta = retrieveData("Delta.html")
+        deltaToDB(self.dataDelta, cur, conn)
+
+        self.dataSP = retrieveData("S&P.html")
+        SPToDB(self.dataDelta, cur, conn)
+        
+
 
 
 if __name__ == '__main__':
