@@ -16,42 +16,72 @@ import unittest
 def retriveCovidData():
     pass
 
-
-def retrieveSPData():
-    pass
-
-def retrieveAbbottData():
-    r = requests.get('https://finance.yahoo.com/quote/ABT/history?period1=1577836800&period2=1609372800&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true') 
-    soup = BeautifulSoup(r.content, "html.parser")
+def retrieveData(filename):
+    with open(filename) as fp:
+        soup = BeautifulSoup(fp, "html.parser")
     
     closeData = []
     rows = soup.find_all('tr', class_ = 'BdT Bdc($seperatorColor) Ta(end) Fz(s) Whs(nw)')
     
     for row in rows:
         dateLocation = row.find_all('td', class_ = 'Py(10px) Ta(start) Pend(10px)')
-        date = dateLocation[0].text.strip()
-        stock = row.find_all('td', class_ = 'Py(10px) Pstart(10px)')
-        if len(stock) == 6:
+        if len(dateLocation) != 0:
+            dateUnformat = dateLocation[0].text.strip()
+            dateUnformat = dateUnformat.split()
+            month = monthNumber(dateUnformat[0])
+            date = dateUnformat[2] + '-' + month + '-' + dateUnformat[1].strip(',')
+
+            stock = row.find_all('td', class_ = 'Py(10px) Pstart(10px)')
             price = stock[4].text.strip()
-            closeData.append((date, price))
+            closeData.append((price, date))
     
     return closeData
 
-
-def retrieveDeltaData():
-    pass
+def monthNumber(month):
+    if month == 'Jan': 
+        return '01'
+    if month == 'Feb': 
+        return '02'
+    if month == 'Mar': 
+        return '03'
+    if month == 'Apr': 
+        return '04'
+    if month == 'May': 
+        return '05'
+    if month == 'Jun': 
+        return '06'
+    if month == 'Jul': 
+        return '07'
+    if month == 'Aug': 
+        return '08'
+    if month == 'Sep': 
+        return '09'
+    if month == 'Oct': 
+        return '10'
+    if month == 'Nov': 
+        return '11'
+    if month == 'Dec': 
+        return '12'
 
 def SPCovidPlot():
-    SPData = retrieveSPData
+    SPData = retrieveData("S&P.html")
     pass
 
 def abbottCovidPlot():
+    abbott = retrieveData("Abbott.html")
     pass
 
 def deltaCovidPlot():
+    delta = retrieveData("Delta.html")
     pass
 
 
 class TestCases(unittest.TestCase):
-    def testAbbott(self):
-        self.assertEqual(len(retrieveAbbottData()), 256)
+    def testGetData(self):
+        self.assertEqual(len(retrieveData("Abbott.html")), 252)
+        self.assertEqual(len(retrieveData("S&P.html")), 252)
+        self.assertEqual(len(retrieveData("Delta.html")), 252)
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
