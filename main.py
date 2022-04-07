@@ -63,10 +63,12 @@ def retrieveData(filename):
     return closeData
 
 def abbottToDB(data, cur, conn):
-    cur.execute("CREATE TABLE IF NOT EXISTS Abbott (date DATE PRIMARY KEY, adjClose FLOAT(2))")
+    cur.execute("CREATE TABLE IF NOT EXISTS Abbott (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
     conn.commit()
-    for day in data:
-        cur.execute("INSERT OR IGNORE INTO Abbott (date, adjClose) VALUES (?, ?)",(day[1], day[0]))
+    for row in data:
+        date = row[1].split('-')
+        month = int(date[1])
+        cur.execute("INSERT OR IGNORE INTO Abbott (date, month, adjClose) VALUES (?, ?, ?)",(row[1], month, row[0]))
     conn.commit()
 
 def deltaToDB(data, cur, conn):
@@ -110,13 +112,31 @@ def monthNumber(month):
     if month == 'Dec': 
         return '12'
 
-def SPCovidPlot():
-    SPData = retrieveData("S&P.html")
+def SPCovidPlot(cur, conn):
     pass
 
-def abbottCovidPlot():
-    abbott = retrieveData("Abbott.html")
+def abbottCovidPlot(cur, conn):
+    cur.execute(
+        '''
+        SELECT Abbott.adjClose, Abbott.date, Covid.positive
+        FROM Abbott
+        JOIN Covid ON Abbott.date = Covid.date
+        '''
+    )
+    res = cur.fetchall()
+    x = [mon[0] for mon in res]
+    y = [mon[1] for mon in res]
     pass
+
+def AbbottMonth(cur, conn):
+    cur.execute(
+        '''
+        SELECT AVG(Abbott.adjClose), Abbott.month
+        FROM Abbott
+        GROUP BY Abbott.month
+        '''
+    )
+    res = cur.fetchall()
 
 def deltaCovidPlot():
     delta = retrieveData("Delta.html")
@@ -130,18 +150,22 @@ class TestCases(unittest.TestCase):
         self.assertEqual(len(retrieveData("Delta.html")), 252)
     
     def testDatabase(self):
-        cur, conn = setUpDatabase('Data.db')
+        self.cur, self.conn = setUpDatabase('Data.db')
         self.data = retrieveDictfromData('Covid.json')
-        CovidDatatoDB(self.data,cur,conn)
+        CovidDatatoDB(self.data, self.cur, self.conn)
 
         self.dataAb = retrieveData("Abbott.html")
-        abbottToDB(self.dataAb, cur, conn)
+        abbottToDB(self.dataAb, self.cur, self.conn)
 
         self.dataDelta = retrieveData("Delta.html")
-        deltaToDB(self.dataDelta, cur, conn)
+        deltaToDB(self.dataDelta, self.cur, self.conn)
 
         self.dataSP = retrieveData("S&P.html")
-        SPToDB(self.dataDelta, cur, conn)
+        SPToDB(self.dataDelta, self.cur, self.conn)
+
+    def testPlots(self):
+        self.cur, self.conn = setUpDatabase('Data.db')
+        abbottCovidPlot(self.cur, self.conn)
         
 
 
