@@ -1,8 +1,8 @@
 from calendar import c
 import sqlite3
 import os
-#import matplotlib.pyplot as plt
-#import numpy as np
+import matplotlib.pyplot as plt
+import numpy as np
 from queue import Empty
 from unittest import result
 from xml.sax import parseString
@@ -149,6 +149,19 @@ def SPCovidPlot(cur, conn):
     ySP = [mon[0] for mon in res]
     yCovid = [mon[2] for mon in res]
     x = [mon[1] for mon in res]
+
+
+    fig, ax1 = plt.subplots() 
+  
+    ax1.set_xlabel('Date') 
+    ax1.set_ylabel('S&P Daily Stock Price') 
+    ax1.plot(x, ySP, color = 'red') 
+  
+    ax2 = ax1.twinx() 
+    ax2.plot(x, yCovid, color = 'blue')  
+    plt.ylabel('Daily Covid-19 Cases') 
+
+    plt.show()
 
     # TODO: Create line chart with x and y
     return
