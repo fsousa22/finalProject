@@ -20,6 +20,7 @@ import json
 '''
 - 25 or fewer restriction
 - Create at least 2 visualizations of the calculated data
+- read in from api not downloaded json file
 '''
 
 
