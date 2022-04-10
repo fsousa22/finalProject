@@ -18,20 +18,18 @@ import io
 import sys
 import json
 
-# TODO:
-'''
-- 25 or fewer restriction
-- read in from api not downloaded json file
-'''
 
-
-def setUpDatabase(db_name):
+def setUpDatabase(db_name): 
+    ''' This funct takes in the database name and finds the database or creates a database and 
+    return the cursor and the connection'''
     path = os.path.dirname(os.path.abspath(__file__))
     conn = sqlite3.connect(path+'/'+db_name)
     cur = conn.cursor()
     return cur, conn
 
-def retrieveDictfromData(fileName):
+def retrieveDictfromData(fileName): 
+    ''' This function takes in a filename, find the file and loads the json content and 
+    returns a list of dictionaries with the json content'''
     try:
         source_dir = os.path.dirname(__file__)
         full_path = os.path.join(source_dir, fileName)
@@ -45,6 +43,8 @@ def retrieveDictfromData(fileName):
     return data
 
 def CovidDatatoDB(data, cur, conn):
+    ''' This function takes in a cursor, connection, and the loaded in json content in a list of dictionaries. 
+    It then adds the Covid-19 data to our database and returns nothing'''
     cur.execute("CREATE TABLE IF NOT EXISTS Covid (date DATE PRIMARY KEY, month INTEGER, positive INTEGER, positive_inc INTEGER, hospitalized_cur INTEGER)")
     conn.commit()
     for row in data:
@@ -61,6 +61,8 @@ def CovidDatatoDB(data, cur, conn):
 
 
 def retrieveData(filename):
+    ''' This function takes in the filename of a html file and converts the information from the html to a list
+    with the date and stock price. It returns the list of tuples with the stock data.'''
     with open(filename) as fp:
         soup = BeautifulSoup(fp, "html.parser")
     
@@ -82,6 +84,8 @@ def retrieveData(filename):
     return closeData
 
 def abbottToDB(data, cur, conn):
+    ''' This function takes in the data in the format of a list of tuples containing the date and closing stock price.
+    It then creates and adds this information to the Abbott table in the database. It returns nothing.'''
     cur.execute("CREATE TABLE IF NOT EXISTS Abbott (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
     conn.commit()
     for row in data:
@@ -92,6 +96,8 @@ def abbottToDB(data, cur, conn):
     return
 
 def deltaToDB(data, cur, conn):
+    ''' This function takes in the data in the format of a list of tuples containing the date and closing stock price.
+    It then creates and adds this information to the Delta table in the database. It returns nothing.'''
     cur.execute("CREATE TABLE IF NOT EXISTS Delta (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
     conn.commit()
     for row in data:
@@ -102,6 +108,8 @@ def deltaToDB(data, cur, conn):
     return
 
 def SPToDB(data, cur, conn):
+    ''' This function takes in the data in the format of a list of tuples containing the date and closing stock price.
+    It then creates and adds this information to the S&P 500 table in the database. It returns nothing.'''
     cur.execute("CREATE TABLE IF NOT EXISTS SP500 (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
     conn.commit()
     for row in data:
@@ -113,6 +121,7 @@ def SPToDB(data, cur, conn):
     return
 
 def monthNumber(month):
+    ''' This function takes in the month name as a string and returns the month number as a string.'''
     if month == 'Jan': 
         return '01'
     if month == 'Feb': 
@@ -139,6 +148,10 @@ def monthNumber(month):
         return '12'
 
 def SPCovidPlot(cur, conn):
+    ''' This function takes in a cursor and connection. It selects the adjusted close of the S&P 500 stock, the increase
+    in Covid-19 cases and the date. It calls the function createLinePlot using the fetched information in the form of
+    a list of tuples. It returns nothing. 
+    '''
     cur.execute(
         '''
         SELECT SP500.adjClose, SP500.date, Covid.positive_inc
@@ -152,6 +165,9 @@ def SPCovidPlot(cur, conn):
     return
 
 def createLinePlot (res, name):
+    ''' This function takes in a list of tuples containing the date, stock closing price, and daily increase in 
+    Covid-19 cases as well as the stock name. It creates a line plot of the stock price vs. Covid-19 daily cases.
+    It return nothing. '''
     yStock = []
     yCovid = []
     x = []
@@ -164,7 +180,7 @@ def createLinePlot (res, name):
   
     ax1.set_xlabel('Date') 
     ax1.set_ylabel('Daily Stock Price') 
-    ax1.plot(x, yStock, color = 'red') 
+    ax1.plot(x, yStock, color = 'red')
   
     ax2 = ax1.twinx() 
     ax2.plot(x, yCovid, color = 'blue')
@@ -180,6 +196,10 @@ def createLinePlot (res, name):
 
 
 def abbottCovidPlot(cur, conn):
+    ''' This function takes in a cursor and connection. It selects the adjusted close of the Abbott stock, the increase
+    in Covid-19 cases and the date. It calls the function createLinePlot using the fetched information in the form of
+    a list of tuples. It returns nothing. 
+    '''
     cur.execute(
         '''
         SELECT Abbott.adjClose, Abbott.date, Covid.positive_inc
@@ -192,6 +212,10 @@ def abbottCovidPlot(cur, conn):
     return
 
 def deltaCovidPlot(cur, conn):
+    ''' This function takes in a cursor and connection. It selects the adjusted close of the Delta stock, the increase
+    in Covid-19 cases and the date. It calls the function createLinePlot using the fetched information in the form of
+    a list of tuples. It returns nothing. 
+    '''
     cur.execute(
         '''
         SELECT Delta.adjClose, Delta.date, Covid.positive_inc
@@ -204,7 +228,10 @@ def deltaCovidPlot(cur, conn):
     createLinePlot(res, "Delta")
     return
 
-def Month(cur, conn):
+def Month(cur):
+    ''' This function takes in the cursor to our database and retrieves monthly average the adjusted close for all 
+    three stocks and Covid-19 positive cases. It will create a table in a csv file with the monthly averages. 
+    It returns nothing.'''
     cur.execute(
         '''
         SELECT Abbott.month, AVG(Covid.positive_inc), AVG(Abbott.adjClose), AVG(Delta.adjClose), AVG(SP500.adjClose)
@@ -231,6 +258,8 @@ def Month(cur, conn):
     return
 
 def barChart(cur):
+    ''' This function takes in a cursor to our database and creates a bar chart of the percent change in stock price
+    for all three stocks. It returns nothing.'''
     cur.execute(
         '''
         SELECT Delta.adjClose, SP500.adjClose, Abbott.adjClose
@@ -253,6 +282,8 @@ def barChart(cur):
     plt.show()
 
 def pieChart(cur):
+    ''' This function takes in a cursor to our database and creates a pie chart of the average Covid-19 cases per
+    month. This function returns nothing.'''
     cur.execute(
         '''
         SELECT AVG(Covid.positive_inc)
@@ -272,6 +303,8 @@ def pieChart(cur):
     plt.show()
 
 def hospitalizationsPlot(cur):
+    ''' This function takes in a cursor to our database and creates a line chart of the Covid-19 hospitalizations. 
+    This function returns nothing.'''
     cur.execute(
         '''
         SELECT Covid.hospitalized_cur, Covid.date
@@ -295,12 +328,16 @@ def hospitalizationsPlot(cur):
 
 
 def main():
+    ''' This function calls all the above functions.'''
+    # Creating database
     cur, conn = setUpDatabase("Data.db")
     CovidDatatoDB(retrieveDictfromData('Covid.json'), cur, conn)
     abbottToDB(retrieveData("Abbott.html"), cur, conn)
     deltaToDB(retrieveData("Delta.html"), cur, conn)
     SPToDB(retrieveData("S&P.html"), cur, conn)
+    # CVS file with monthly averages
     Month(cur, conn)
+    # Visualizatons
     SPCovidPlot(cur, conn)
     abbottCovidPlot(cur, conn)
     deltaCovidPlot(cur, conn)
