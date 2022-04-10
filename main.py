@@ -1,7 +1,9 @@
 from calendar import c
 import sqlite3
 import os
+from tkinter import Y
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdate
 import numpy as np
 from queue import Empty
 from unittest import result
@@ -19,7 +21,6 @@ import json
 # TODO:
 '''
 - 25 or fewer restriction
-- Create at least 2 visualizations of the calculated data
 - read in from api not downloaded json file
 '''
 
@@ -140,68 +141,73 @@ def monthNumber(month):
 def SPCovidPlot(cur, conn):
     cur.execute(
         '''
-        SELECT SP500.adjClose, SP500.date, Covid.positive
+        SELECT SP500.adjClose, SP500.date, Covid.positive_inc
         FROM SP500
         JOIN Covid ON SP500.date = Covid.date
         '''
     )
     res = cur.fetchall()
-    ySP = [mon[0] for mon in res]
-    yCovid = [mon[2] for mon in res]
-    x = [mon[1] for mon in res]
+    createLinePlot(res, "S&P 500")
 
+    return
+
+def createLinePlot (res, name):
+    yStock = []
+    yCovid = []
+    x = []
+    for mon in reversed(res):
+        yStock.append(mon[0])
+        yCovid.append(mon[2])
+        x.append(mon[1])
 
     fig, ax1 = plt.subplots() 
   
     ax1.set_xlabel('Date') 
-    ax1.set_ylabel('S&P Daily Stock Price') 
-    ax1.plot(x, ySP, color = 'red') 
+    ax1.set_ylabel('Daily Stock Price') 
+    ax1.plot(x, yStock, color = 'red') 
   
     ax2 = ax1.twinx() 
-    ax2.plot(x, yCovid, color = 'blue')  
-    plt.ylabel('Daily Covid-19 Cases') 
+    ax2.plot(x, yCovid, color = 'blue')
+    plt.ylabel('Daily Covid-19 Cases')
+    ax1.legend([name], loc = "upper left")
+    ax2.legend(["New Covid-19 Cases"], loc = "lower right")
+    ax1.xaxis.set_ticks(["2020-01-14", "2020-05-14", "2020-09-14", "2020-12-30"])
+    plt.title("Covid-19 Cases vs. Stock Price in 2020")
+    plt.tight_layout()
 
     plt.show()
+    
 
-    # TODO: Create line chart with x and y
-    return
 
 def abbottCovidPlot(cur, conn):
     cur.execute(
         '''
-        SELECT Abbott.adjClose, Abbott.date, Covid.positive
+        SELECT Abbott.adjClose, Abbott.date, Covid.positive_inc
         FROM Abbott
         JOIN Covid ON Abbott.date = Covid.date
         '''
     )
     res = cur.fetchall()
-    yAb = [mon[0] for mon in res]
-    yCovid = [mon[2] for mon in res]
-    x = [mon[1] for mon in res]
-
-    # TODO: Create line chart with x and y
+    createLinePlot(res, "Abbott")
     return
 
 def deltaCovidPlot(cur, conn):
     cur.execute(
         '''
-        SELECT Delta.adjClose, Delta.date, Covid.positive
+        SELECT Delta.adjClose, Delta.date, Covid.positive_inc
         FROM Delta
         JOIN Covid ON Delta.date = Covid.date
         '''
     )
     res = cur.fetchall()
-    yDelta = [mon[0] for mon in res]
-    yCovid = [mon[2] for mon in res]
-    x = [mon[1] for mon in res]
-
-    # TODO: Create line chart with x and y
+    
+    createLinePlot(res, "Delta")
     return
 
 def Month(cur, conn):
     cur.execute(
         '''
-        SELECT Abbott.month, AVG(Covid.positive), AVG(Abbott.adjClose), AVG(Delta.adjClose), AVG(SP500.adjClose)
+        SELECT Abbott.month, AVG(Covid.positive_inc), AVG(Abbott.adjClose), AVG(Delta.adjClose), AVG(SP500.adjClose)
         FROM Abbott
         JOIN Covid JOIN Delta JOIN SP500 ON Covid.month = Abbott.month AND Delta.month = Abbott.month AND SP500.month = Abbott.month 
         GROUP BY Abbott.month
@@ -224,6 +230,70 @@ def Month(cur, conn):
     fout.close()
     return
 
+def barChart(cur):
+    cur.execute(
+        '''
+        SELECT Delta.adjClose, SP500.adjClose, Abbott.adjClose
+        FROM Delta
+        JOIN SP500 JOIN Abbott ON Delta.date = SP500.date AND Delta.date = Abbott.date
+        '''
+    )
+    res = cur.fetchall()
+    Dfirst, SPfirst, Abbottfirst = res[-1]
+    Dend, SPend, Abbottend = res[0]
+    Dinc = (Dend - Dfirst) / Dfirst * 100
+    SPinc = (SPend - SPfirst) / SPfirst * 100
+    Ainc = (Abbottend - Abbottfirst) / Abbottfirst * 100
+
+    plt.bar(["Delta", "S&P 500", "Abbott"], [Dinc, SPinc, Ainc])
+    plt.ylabel("Percent Change")
+    plt.xlabel("Stock")
+    plt.title("Percent Increase of Stocks in 2020")
+    plt.tight_layout()
+    plt.show()
+
+def pieChart(cur):
+    cur.execute(
+        '''
+        SELECT AVG(Covid.positive_inc)
+        FROM Covid
+        GROUP BY Covid.month
+        '''
+    )
+    res = cur.fetchall()
+    cases = []
+    for mon in res:
+        cases.append(mon[0])
+
+    months = ["Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    plt.pie(cases[2:], labels=months)
+    plt.title("Average Covid-19 Cases per Month in 2020")
+    plt.show()
+
+def hospitalizationsPlot(cur):
+    cur.execute(
+        '''
+        SELECT Covid.hospitalized_cur, Covid.date
+        FROM Covid
+        '''
+    )
+    res = cur.fetchall()
+    y = []
+    x = []
+    for mon in reversed(res):
+        y.append(mon[0])
+        x.append(mon[1])
+
+    plt.plot(x, y)
+
+    plt.xticks(["2020-01-14", "2020-05-14", "2020-09-14", "2020-12-30"])
+    plt.title("Current Hospitalizations due to Covid-19 in 2020")
+    plt.tight_layout()
+
+    plt.show()
+
+
 def main():
     cur, conn = setUpDatabase("Data.db")
     CovidDatatoDB(retrieveDictfromData('Covid.json'), cur, conn)
@@ -234,6 +304,9 @@ def main():
     SPCovidPlot(cur, conn)
     abbottCovidPlot(cur, conn)
     deltaCovidPlot(cur, conn)
+    barChart(cur)
+    pieChart(cur)
+    hospitalizationsPlot(cur)
 
 
 class TestCases(unittest.TestCase):
