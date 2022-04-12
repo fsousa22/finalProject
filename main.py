@@ -30,7 +30,7 @@ def setUpDatabase(db_name):
 def retrieveDictfromData(fileName): 
     ''' This function takes in a filename, find the file and loads the json content and 
     returns a list of dictionaries with the json content'''
-       '''
+    '''
     try:
         source_dir = os.path.dirname(__file__)
         full_path = os.path.join(source_dir, fileName)
@@ -345,7 +345,7 @@ def main():
     deltaToDB(retrieveData("Delta.html"), cur, conn)
     SPToDB(retrieveData("S&P.html"), cur, conn)
     # CVS file with monthly averages
-    Month(cur, conn)
+    Month(cur)
     # Visualizatons
     SPCovidPlot(cur, conn)
     abbottCovidPlot(cur, conn)
