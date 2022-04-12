@@ -27,135 +27,6 @@ def setUpDatabase(db_name):
     cur = conn.cursor()
     return cur, conn
 
-def retrieveDictfromData(fileName): 
-    ''' This function takes in a filename, find the file and loads the json content and 
-    returns a list of dictionaries with the json content'''
-    '''
-    try:
-        source_dir = os.path.dirname(__file__)
-        full_path = os.path.join(source_dir, fileName)
-        file = open(full_path, 'r')
-        contents = file.read()
-        file.close()
-        data = json.loads(contents)
-    except:
-        print("error when reading from file")
-        data = []
-    return data
-    '''
-    try:
-        resp = requests.get("https://api.covidtracking.com/v1/us/daily.json")
-        json = resp.json()
-    except:
-        print("error reading in from url")
-        json = []
-    return json
-
-def CovidDatatoDB(data, cur, conn):
-    ''' This function takes in a cursor, connection, and the loaded in json content in a list of dictionaries. 
-    It then adds the Covid-19 data to our database and returns nothing'''
-    cur.execute("CREATE TABLE IF NOT EXISTS Covid (date DATE PRIMARY KEY, month INTEGER, positive INTEGER, positive_inc INTEGER, hospitalized_cur INTEGER)")
-    conn.commit()
-    for row in data:
-        date = str(row['date'])
-        day = date[-2:]
-        month = date[4:6]
-        year = date[0:4]
-        if year != '2020':
-            continue
-        date = year + '-' + month + '-' + day
-        cur.execute("INSERT OR IGNORE INTO Covid (date, month, positive, positive_inc, hospitalized_cur) VALUES (?,?,?,?,?)",(date, month, row['positive'],row['positiveIncrease'],row['hospitalizedCurrently']))
-    conn.commit()
-    return
-
-
-def retrieveData(filename):
-    ''' This function takes in the filename of a html file and converts the information from the html to a list
-    with the date and stock price. It returns the list of tuples with the stock data.'''
-    with open(filename) as fp:
-        soup = BeautifulSoup(fp, "html.parser")
-    
-    closeData = []
-    rows = soup.find_all('tr', class_ = 'BdT Bdc($seperatorColor) Ta(end) Fz(s) Whs(nw)')
-    
-    for row in rows:
-        dateLocation = row.find_all('td', class_ = 'Py(10px) Ta(start) Pend(10px)')
-        if len(dateLocation) != 0:
-            dateUnformat = dateLocation[0].text.strip()
-            dateUnformat = dateUnformat.split()
-            month = monthNumber(dateUnformat[0])
-            date = dateUnformat[2] + '-' + month + '-' + dateUnformat[1].strip(',')
-
-            stock = row.find_all('td', class_ = 'Py(10px) Pstart(10px)')
-            price = stock[4].text.strip()
-            closeData.append((price, date))
-    
-    return closeData
-
-def abbottToDB(data, cur, conn):
-    ''' This function takes in the data in the format of a list of tuples containing the date and closing stock price.
-    It then creates and adds this information to the Abbott table in the database. It returns nothing.'''
-    cur.execute("CREATE TABLE IF NOT EXISTS Abbott (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
-    conn.commit()
-    for row in data:
-        date = row[1].split('-')
-        month = int(date[1])
-        cur.execute("INSERT OR IGNORE INTO Abbott (date, month, adjClose) VALUES (?, ?, ?)",(row[1], month, row[0]))
-    conn.commit()
-    return
-
-def deltaToDB(data, cur, conn):
-    ''' This function takes in the data in the format of a list of tuples containing the date and closing stock price.
-    It then creates and adds this information to the Delta table in the database. It returns nothing.'''
-    cur.execute("CREATE TABLE IF NOT EXISTS Delta (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
-    conn.commit()
-    for row in data:
-        date = row[1].split('-')
-        month = int(date[1])
-        cur.execute("INSERT OR IGNORE INTO Delta (date, month, adjClose) VALUES (?, ?, ?)",(row[1], month, row[0]))
-    conn.commit()
-    return
-
-def SPToDB(data, cur, conn):
-    ''' This function takes in the data in the format of a list of tuples containing the date and closing stock price.
-    It then creates and adds this information to the S&P 500 table in the database. It returns nothing.'''
-    cur.execute("CREATE TABLE IF NOT EXISTS SP500 (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
-    conn.commit()
-    for row in data:
-        date = row[1].split('-')
-        month = int(date[1])
-        stock = row[0].replace(',', "")
-        cur.execute("INSERT OR IGNORE INTO SP500 (date, month, adjClose) VALUES (?, ?, ?)",(row[1], month, stock))
-    conn.commit()
-    return
-
-def monthNumber(month):
-    ''' This function takes in the month name as a string and returns the month number as a string.'''
-    if month == 'Jan': 
-        return '01'
-    if month == 'Feb': 
-        return '02'
-    if month == 'Mar': 
-        return '03'
-    if month == 'Apr': 
-        return '04'
-    if month == 'May': 
-        return '05'
-    if month == 'Jun': 
-        return '06'
-    if month == 'Jul': 
-        return '07'
-    if month == 'Aug': 
-        return '08'
-    if month == 'Sep': 
-        return '09'
-    if month == 'Oct': 
-        return '10'
-    if month == 'Nov': 
-        return '11'
-    if month == 'Dec': 
-        return '12'
-
 def SPCovidPlot(cur, conn):
     ''' This function takes in a cursor and connection. It selects the adjusted close of the S&P 500 stock, the increase
     in Covid-19 cases and the date. It calls the function createLinePlot using the fetched information in the form of
@@ -201,9 +72,8 @@ def createLinePlot (res, name):
     plt.tight_layout()
 
     plt.show()
+    return
     
-
-
 def abbottCovidPlot(cur, conn):
     ''' This function takes in a cursor and connection. It selects the adjusted close of the Abbott stock, the increase
     in Covid-19 cases and the date. It calls the function createLinePlot using the fetched information in the form of
@@ -334,16 +204,13 @@ def hospitalizationsPlot(cur):
     plt.tight_layout()
 
     plt.show()
+    return
 
 
 def main():
     ''' This function calls all the above functions.'''
     # Creating database
     cur, conn = setUpDatabase("Data.db")
-    CovidDatatoDB(retrieveDictfromData('Covid.json'), cur, conn)
-    abbottToDB(retrieveData("Abbott.html"), cur, conn)
-    deltaToDB(retrieveData("Delta.html"), cur, conn)
-    SPToDB(retrieveData("S&P.html"), cur, conn)
     # CVS file with monthly averages
     Month(cur)
     # Visualizatons
@@ -353,34 +220,7 @@ def main():
     barChart(cur)
     pieChart(cur)
     hospitalizationsPlot(cur)
-
-
-class TestCases(unittest.TestCase):
-    def testGetData(self):
-        self.assertEqual(len(retrieveData("Abbott.html")), 252)
-        self.assertEqual(len(retrieveData("S&P.html")), 252)
-        self.assertEqual(len(retrieveData("Delta.html")), 252)
-    
-    def testDatabase(self):
-        self.cur, self.conn = setUpDatabase('Data.db')
-        self.data = retrieveDictfromData('Covid.json')
-        CovidDatatoDB(self.data, self.cur, self.conn)
-
-        self.dataAb = retrieveData("Abbott.html")
-        abbottToDB(self.dataAb, self.cur, self.conn)
-
-        self.dataDelta = retrieveData("Delta.html")
-        deltaToDB(self.dataDelta, self.cur, self.conn)
-
-        self.dataSP = retrieveData("S&P.html")
-        SPToDB(self.dataSP, self.cur, self.conn)
-
-    def testPlots(self):
-        self.cur, self.conn = setUpDatabase('Data.db')
-        abbottCovidPlot(self.cur, self.conn)
-        Month(self.cur, self.conn)
-        
+    return
 
 if __name__ == '__main__':
     main()
-    # unittest.main(verbosity=2)
