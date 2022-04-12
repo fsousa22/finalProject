@@ -31,7 +31,8 @@ def setUpDatabase(db_name):
     cur = conn.cursor()
     return cur, conn
 
-def retrieveDictfromData(fileName):
+def retrieveDictfromData(url):
+    '''
     try:
         source_dir = os.path.dirname(__file__)
         full_path = os.path.join(source_dir, fileName)
@@ -43,6 +44,15 @@ def retrieveDictfromData(fileName):
         print("error when reading from file")
         data = []
     return data
+    '''
+    try:
+        resp = requests.get("https://api.covidtracking.com/v1/us/daily.json")
+        json = resp.json()
+    except:
+        print("error reading in from url")
+        json = []
+    
+    return json
 
 def CovidDatatoDB(data, cur, conn):
     cur.execute("CREATE TABLE IF NOT EXISTS Covid (date DATE PRIMARY KEY, month INTEGER, positive INTEGER, positive_inc INTEGER, hospitalized_cur INTEGER)")
