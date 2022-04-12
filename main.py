@@ -30,6 +30,7 @@ def setUpDatabase(db_name):
 def retrieveDictfromData(fileName): 
     ''' This function takes in a filename, find the file and loads the json content and 
     returns a list of dictionaries with the json content'''
+       '''
     try:
         source_dir = os.path.dirname(__file__)
         full_path = os.path.join(source_dir, fileName)
@@ -41,6 +42,14 @@ def retrieveDictfromData(fileName):
         print("error when reading from file")
         data = []
     return data
+    '''
+    try:
+        resp = requests.get("https://api.covidtracking.com/v1/us/daily.json")
+        json = resp.json()
+    except:
+        print("error reading in from url")
+        json = []
+    return json
 
 def CovidDatatoDB(data, cur, conn):
     ''' This function takes in a cursor, connection, and the loaded in json content in a list of dictionaries. 
