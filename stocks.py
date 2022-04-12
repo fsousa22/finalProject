@@ -2,9 +2,6 @@ from calendar import c
 import sqlite3
 import os
 from tkinter import Y
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdate
-import numpy as np
 from queue import Empty
 from unittest import result
 from xml.sax import parseString
@@ -50,42 +47,54 @@ def retrieveData(filename):
     
     return closeData
 
-def abbottToDB(data, cur, conn):
+def abbottToDB(data, cur, conn, current):
     ''' This function takes in the data in the format of a list of tuples containing the date and closing stock price.
     It then creates and adds this information to the Abbott table in the database. It returns nothing.'''
     cur.execute("CREATE TABLE IF NOT EXISTS Abbott (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
     conn.commit()
+    count = current
     for row in data:
+        if count == 25:
+            break
         date = row[1].split('-')
         month = int(date[1])
         cur.execute("INSERT OR IGNORE INTO Abbott (date, month, adjClose) VALUES (?, ?, ?)",(row[1], month, row[0]))
+        count += cur.rowcount
     conn.commit()
-    return
+    return count
 
-def deltaToDB(data, cur, conn):
+def deltaToDB(data, cur, conn, current):
     ''' This function takes in the data in the format of a list of tuples containing the date and closing stock price.
     It then creates and adds this information to the Delta table in the database. It returns nothing.'''
     cur.execute("CREATE TABLE IF NOT EXISTS Delta (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
     conn.commit()
+    count = current
     for row in data:
+        if count == 25:
+            break
         date = row[1].split('-')
         month = int(date[1])
         cur.execute("INSERT OR IGNORE INTO Delta (date, month, adjClose) VALUES (?, ?, ?)",(row[1], month, row[0]))
+        count += cur.rowcount
     conn.commit()
-    return
+    return count
 
-def SPToDB(data, cur, conn):
+def SPToDB(data, cur, conn, current):
     ''' This function takes in the data in the format of a list of tuples containing the date and closing stock price.
     It then creates and adds this information to the S&P 500 table in the database. It returns nothing.'''
     cur.execute("CREATE TABLE IF NOT EXISTS SP500 (date DATE PRIMARY KEY, month INTEGER, adjClose FLOAT(2))")
     conn.commit()
+    count = current
     for row in data:
+        if count == 25:
+            break
         date = row[1].split('-')
         month = int(date[1])
         stock = row[0].replace(',', "")
         cur.execute("INSERT OR IGNORE INTO SP500 (date, month, adjClose) VALUES (?, ?, ?)",(row[1], month, stock))
+        count += cur.rowcount
     conn.commit()
-    return
+    return count
 
 def monthNumber(month):
     ''' This function takes in the month name as a string and returns the month number as a string.'''
@@ -118,9 +127,14 @@ def main():
     ''' This function calls all the above functions.'''
     # Creating database
     cur, conn = setUpDatabase("Data.db")
-    abbottToDB(retrieveData("Abbott.html"), cur, conn)
-    deltaToDB(retrieveData("Delta.html"), cur, conn)
-    SPToDB(retrieveData("S&P.html"), cur, conn)
+    count = 0
+    count = abbottToDB(retrieveData("Abbott.html"), cur, conn, count)
+    if count == 25:
+        return
+    count = deltaToDB(retrieveData("Delta.html"), cur, conn, count)
+    if count == 25:
+        return
+    count = SPToDB(retrieveData("S&P.html"), cur, conn, count)
     return
 
 class TestCases(unittest.TestCase):

@@ -2,9 +2,6 @@ from calendar import c
 import sqlite3
 import os
 from tkinter import Y
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdate
-import numpy as np
 from queue import Empty
 from unittest import result
 from xml.sax import parseString
@@ -43,7 +40,10 @@ def CovidDatatoDB(data, cur, conn):
     It then adds the Covid-19 data to our database and returns nothing'''
     cur.execute("CREATE TABLE IF NOT EXISTS Covid (date DATE PRIMARY KEY, month INTEGER, positive INTEGER, positive_inc INTEGER, hospitalized_cur INTEGER)")
     conn.commit()
+    count = 0
     for row in data:
+        if count == 25:
+            break
         date = str(row['date'])
         day = date[-2:]
         month = date[4:6]
@@ -52,6 +52,7 @@ def CovidDatatoDB(data, cur, conn):
             continue
         date = year + '-' + month + '-' + day
         cur.execute("INSERT OR IGNORE INTO Covid (date, month, positive, positive_inc, hospitalized_cur) VALUES (?,?,?,?,?)",(date, month, row['positive'],row['positiveIncrease'],row['hospitalizedCurrently']))
+        count += cur.rowcount
     conn.commit()
     return
 
