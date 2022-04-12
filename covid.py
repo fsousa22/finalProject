@@ -59,7 +59,7 @@ def main():
     ''' This function calls all the above functions.'''
     # Creating database
     cur, conn = setUpDatabase("Data.db")
-    CovidDatatoDB(retrieveDictfromData('Covid.json'), cur, conn)
+    CovidDatatoDB(retrieveDictfromData(), cur, conn)
     return
 
 
